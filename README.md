@@ -47,6 +47,52 @@ Please compile the cuda-based operations in tf-ops folder using the command
 (sudo) ./compile.sh
 ```
 
+
+
+### 鬼知道我搞了这么久有多难受！！！
+ anoconda3+python3.5+tensorflow==1.2.0+cuda==9.0+cudnn==7.1.4
+ 1、安装conda
+ 2、在conda中创建python3.5环境
+ 3、安装tensorflow、cuda、cudnn
+ ### 4、conda多cuda设置
+ 参考1：https://blog.csdn.net/hizengbiao/article/details/88625044?utm_medium=distribute.pc_relevant.none-task-blog-BlogCommendFromMachineLearnPai2-1.edu_weight&depth_1-utm_source=distribute.pc_relevant.none-task-blog-BlogCommendFromMachineLearnPai2-1.edu_weight
+ 参考2：https://blog.csdn.net/qq_27825451/article/details/89082978
+ 查看当前cuda版本 nvcc -V
+ 查看当前cudnn版本（需要根据cuda安装位置确定，我这里cuda就在个人账号下的cuda/cuda-9.0）cat cuda/cuda-9.0/include/cudnn.h | grep CUDNN_MAJOR -A 2
+ ### ./compile.sh文件在conda中的使用问题
+ chmod +x compile.sh
+ 修改 compile.sh
+ ```
+cd tf_ops/convolution
+sudo ./tf_conv3d_compile.sh
+cd ../nnquery
+sudo ./tf_nnquery_compile.sh
+cd ../sampling
+sudo ./tf_sample_compile.sh
+cd ../pooling
+sudo ./tf_pool3d_compile.sh
+cd ../unpooling
+sudo ./tf_unpool3d_compile.sh
+cd ../buildkernel
+sudo ./tf_buildkernel_compile.sh
+ ```
+chmod +x convolution/tf_conv3d_compile.sh nnquery/tf_nnquery_compile.sh sampling/tf_sample_compile.sh pooling/tf_pool3d_compile.sh unpooling/tf_unpool3d_compile.sh buildkernel/t
+修改上面的xxx.sh(和shell解释器有关，个人感觉原因是你用了#!/usr/bin/env bash，conda安装的环境不能载入到PATH中，可以在.sh文件中用echo $PATH验证,
+```
+#!/usr/bin/env bash
+source /home/gahho/.bashrc
+source /home/gahho/anaconda3/bin/activate sph3d_try1
+TF_CFLAGS=( $(python -c 'import tensorflow as tf; print(" ".join(tf.sysconfig.get_compile_flags()))') )
+TF_LFLAGS=( $(python -c 'import tensorflow as tf; print(" ".join(tf.sysconfig.get_link_flags()))') )
+
+nvcc -std=c++11 -c -o tf_conv3d_gpu.cu.o tf_conv3d_gpu.cu \
+  ${TF_CFLAGS[@]} -D GOOGLE_CUDA=1 -x cu -Xcompiler -fPIC
+
+g++ -std=c++11 -shared -o tf_conv3d_so.so tf_conv3d.cpp \
+  tf_conv3d_gpu.cu.o ${TF_CFLAGS[@]} -fPIC -I/home/gahho/cuda/cuda-9.0/include -lcudart -L/home/gahho/cuda/cuda-9.0/lib64 ${TF_LFLAGS[@]}
+``` 
+
+
 ### Data Preparation
 You may need to install [Matlab](https://au.mathworks.com/products/matlab.html). It is required to preprocess the datasets, such as the grid-based downsampling.  
 We preprocess each segmentation dataset using the corresponding function under the folder ***preprocessing***:
